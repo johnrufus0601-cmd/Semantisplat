@@ -1,0 +1,110 @@
+# ==============================================================================
+# SemantiSplat — Default Configuration
+# All configurable knobs live here. Override via CLI or environment variables.
+# ==============================================================================
+
+# --- General ---
+project_name: "SemantiSplat"
+data_dir: "data"
+device: "cuda"          # "cuda" or "cpu"
+seed: 42
+
+# --- Ingestion (FR-1) ---
+ingestion:
+  # Frame extraction
+  frame_extraction_fps: 10.0         # Frames per second to extract from video
+  max_frames: 300                     # Maximum frames to extract (0 = unlimited)
+  frame_format: "png"                 # Output frame format (png, jpg)
+  frame_quality: 95                   # JPEG quality if frame_format is jpg
+
+  # COLMAP pose estimation
+  colmap:
+    camera_model: "SIMPLE_RADIAL"     # Camera model: SIMPLE_PINHOLE, PINHOLE, OPENCV, SIMPLE_RADIAL
+    use_gpu: true                     # Use GPU for COLMAP feature extraction
+    matcher_type: "sequential"        # exhaustive, sequential, vocab_tree
+    registration_threshold: 0.8       # Warn if fewer than 80% of frames register
+
+# --- Semantic Extraction (FR-2) ---
+semantic:
+  # SAM configuration
+  sam:
+    model_type: "vit_b"              # vit_b, vit_l, vit_h (vit_b for 8GB VRAM)
+    checkpoint: "sam_vit_b_01ec64.pth"
+    points_per_side: 32               # Grid density for automatic mask generation
+    pred_iou_thresh: 0.86             # Predicted IoU threshold for mask filtering
+    stability_score_thresh: 0.92      # Stability score threshold
+    min_mask_area: 100                # Minimum mask area in pixels
+    max_masks_per_frame: 100          # Cap masks per frame
+
+  # CLIP configuration
+  clip:
+    model_name: "ViT-B-32"           # CLIP model variant
+    pretrained: "openai"              # Pretrained weights source
+    embedding_dim: 512                # Native CLIP embedding dimensionality
+    batch_size: 64                    # Batch size for CLIP encoding
+
+# --- 3D Gaussian Reconstruction (FR-3) ---
+reconstruction:
+  # Semantic feature compression
+  semantic_dim: 16                    # Compressed semantic feature dimensionality
+  compression_type: "linear"          # linear, mlp (linear = nn.Linear(512, 16))
+
+  # Training parameters
+  max_iterations: 30000               # Total training iterations
+  learning_rate:
+    position: 0.00016
+    feature: 0.0025
+    opacity: 0.05
+    scaling: 0.005
+    rotation: 0.001
+    semantic: 0.001                   # Learning rate for semantic features
+    compressor: 0.001                 # Learning rate for compression network
+
+  # Loss weights
+  loss_weights:
+    photometric: 1.0                  # RGB reconstruction loss weight
+    ssim: 0.2                         # SSIM loss weight
+    semantic: 0.1                     # Semantic feature loss weight
+
+  # Gaussian management
+  densification:
+    start_iter: 500
+    end_iter: 15000
+    interval: 100
+    grad_threshold: 0.0002
+    min_opacity: 0.005
+
+  # Checkpointing
+  checkpoint_interval: 5000           # Save checkpoint every N iterations
+  output_format: "ply"                # Output format for trained scene
+
+# --- Retrieval (FR-4) ---
+retrieval:
+  top_k: 5                            # Default number of results to return
+  similarity_threshold: 0.25          # Minimum cosine similarity for a valid match
+  spatial_clustering:
+    enabled: true                      # Cluster nearby Gaussians into regions
+    eps: 0.05                          # DBSCAN epsilon for spatial clustering
+    min_samples: 10                    # Minimum Gaussians to form a cluster
+
+# --- Web API ---
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins: ["*"]
+  max_upload_size_mb: 2048            # Maximum video upload size in MB
+  static_dir: "frontend"              # Path to frontend static files
+
+# --- Evaluation ---
+evaluation:
+  datasets:
+    - name: "replica"
+      scene: "room0"
+      queries_file: "evaluation/queries_replica.json"
+    - name: "self_captured"
+      scene: "my_room"
+      queries_file: "evaluation/queries_self.json"
+  metrics:
+    - "top_k_accuracy"
+    - "mean_reciprocal_rank"
+    - "localization_iou"

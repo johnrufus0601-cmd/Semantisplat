@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SemantiSplat — Open-Vocabulary 3D Object Detection & Semantic Search. Upload room images or videos, predict metric 3D bounding boxes, and search with natural language.">
+  <title>SemantiSplat — Open-Vocabulary 3D Object Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header" id="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">◎</span>
+        <h1 class="logo-text">SemantiSplat <span class="badge-tag">OVMono3D</span></h1>
+      </div>
+      <nav class="header-nav">
+        <button class="nav-tab active" data-panel="upload" id="nav-upload">
+          <span class="tab-icon">📤</span> Upload
+        </button>
+        <button class="nav-tab" data-panel="query" id="nav-query">
+          <span class="tab-icon">🔍</span> Search
+        </button>
+        <button class="nav-tab" data-panel="viewer" id="nav-viewer">
+          <span class="tab-icon">🌐</span> 3D Viewer
+        </button>
+        <button class="nav-tab" data-panel="heatmap" id="nav-heatmap">
+          <span class="tab-icon">🗺️</span> Heatmap
+        </button>
+        <button class="nav-tab" data-panel="reprojection" id="nav-reprojection">
+          <span class="tab-icon">📷</span> Reprojection
+        </button>
+      </nav>
+      <div class="header-right-group" style="display: flex; align-items: center; gap: 0.85rem;">
+        <button class="btn btn-header-upload" id="btn-header-upload" title="Upload a new image or video">
+          <span class="btn-icon">📤</span> Upload New Image/Video
+        </button>
+        <div class="header-status">
+          <span class="status-dot" id="status-dot"></span>
+          <span class="status-text" id="status-text">Ready</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main" id="main">
+    <!-- ============ UPLOAD PANEL ============ -->
+    <section class="panel active" id="panel-upload">
+      <div class="panel-content">
+        <div class="upload-zone" id="upload-zone">
+          <div class="upload-icon">📸</div>
+          <h2>Upload Room Image or Video</h2>
+          <p>Drag & drop a single image (JPG, PNG) or room video (MP4, MOV)</p>
+          <p class="upload-hint">Supported: JPG, PNG, WEBP, MP4, AVI, MOV, MKV • Monocular RGB Only</p>
+          <input type="file" id="file-input" accept="video/*,image/*" hidden>
+          <div style="margin-top: 1rem; display: flex; gap: 0.75rem; justify-content: center;">
+            <button class="btn btn-primary" id="browse-btn">Browse Files</button>
+          </div>
+        </div>
+
+        <!-- Upload Progress Section -->
+        <div class="upload-progress-panel" id="upload-progress-panel" style="display:none; text-align:center; margin-top: 2rem;">
+          <h2 class="processing-title">Uploading File...</h2>
+          <div class="progress-bar-container" style="margin-top: 1rem;">
+            <div class="progress-bar" id="upload-progress-bar" style="width: 0%"></div>
+          </div>
+          <p class="progress-message" id="upload-progress-text">0%</p>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="processing-panel" id="processing-panel" style="display:none;">
+          <h2 class="processing-title">Open-Vocabulary 3D Pipeline</h2>
+          <div class="pipeline-stages">
+            <div class="stage" data-stage="frame_extraction" id="stage-frames">
+              <div class="stage-indicator"><span class="stage-num">1</span></div>
+              <div class="stage-info">
+                <span class="stage-name">Ingestion & Extraction</span>
+                <span class="stage-desc">Preparing RGB inputs</span>
+              </div>
+              <span class="stage-status">Pending</span> <span class="stage-percent"></span>
+            </div>
+            <div class="stage" data-stage="pose_estimation" id="stage-colmap">
+              <div class="stage-indicator"><span class="stage-num">2</span></div>
+              <div class="stage-info">
+                <span class="stage-name">Geometry Calibration</span>
+                <span class="stage-desc">Camera & depth reference</span>
+              </div>
+              <span class="stage-status">Pending</span> <span class="stage-percent"></span>
+            </div>
+            <div class="stage" data-stage="segmentation" id="stage-sam">
+              <div class="stage-indicator"><span class="stage-num">3</span></div>
+              <div class="stage-info">
+                <span class="stage-name">Grounding DINO + SAM</span>
+                <span class="stage-desc">Open-vocabulary 3D lifting</span>
+              </div>
+              <span class="stage-status">Pending</span> <span class="stage-percent"></span>
+            </div>
+            <div class="stage" data-stage="coverage_heatmap" id="stage-heatmap">
+              <div class="stage-indicator"><span class="stage-num">4</span></div>
+              <div class="stage-info">
+                <span class="stage-name">Coverage Heatmap</span>
+                <span class="stage-desc">2D floorplan density map</span>
+              </div>
+              <span class="stage-status">Pending</span> <span class="stage-percent"></span>
+            </div>
+            <div class="stage" data-stage="reconstruction" id="stage-gs">
+              <div class="stage-indicator"><span class="stage-num">5</span></div>
+              <div class="stage-info">
+                <span class="stage-name">Metric 3D Scene</span>
+                <span class="stage-desc">Oriented boxes & metric grid</span>
+              </div>
+              <span class="stage-status">Pending</span> <span class="stage-percent"></span>
+            </div>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+            <p class="progress-message" id="progress-message">Waiting...</p>
+            <button class="btn btn-primary" id="retry-btn" style="display:none; background-color: #ef4444;">Retry Failed Pipeline</button>
+          </div>
+          <div class="pipeline-completed-actions" id="pipeline-completed-actions" style="display:none; margin-top: 1.5rem; text-align: center;">
+            <button class="btn btn-header-upload" id="btn-upload-another" style="margin: 0 auto; padding: 0.75rem 1.75rem; font-size: 0.95rem;">
+              <span class="btn-icon">📤</span> Upload Another Image or Video
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ QUERY PANEL ============ -->
+    <section class="panel" id="panel-query">
+      <div class="panel-content">
+        <div class="query-section">
+          <div class="query-title-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.5rem;">
+            <h2 style="margin: 0;">Open-Vocabulary 3D Search & Spatial Reasoning</h2>
+            <button class="btn btn-secondary" id="btn-query-upload" title="Upload a new image or video">
+              <span class="btn-icon">📤</span> Upload New Scene
+            </button>
+          </div>
+          <p class="query-subtitle">Detect any object by text query or test spatial queries like <em>"Can a 6-foot sofa fit here?"</em></p>
+          
+          <div class="query-input-group">
+            <input type="text" class="query-input" id="query-input"
+                   placeholder='Try: "chair", "sofa", "fan", "ladder", or "Can a 6-foot sofa fit here?"'
+                   autocomplete="off">
+            <button class="btn btn-primary" id="query-btn">Search</button>
+          </div>
+
+          <!-- Quick Query Preset Chips -->
+          <div class="quick-chips" style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <span class="chip-label" style="font-size: 0.8rem; color: var(--text-muted); align-self: center;">Quick queries:</span>
+            <button class="chip-btn" data-query="chair">🪑 chair</button>
+            <button class="chip-btn" data-query="sofa">🛋️ sofa</button>
+            <button class="chip-btn" data-query="table">🪵 table</button>
+            <button class="chip-btn" data-query="fan">💨 fan</button>
+            <button class="chip-btn" data-query="ladder">🪜 ladder</button>
+            <button class="chip-btn" data-query="curtain">🪟 curtain</button>
+            <button class="chip-btn chip-spatial" data-query="Can a 6-foot sofa fit here?">📐 Can a 6-foot sofa fit here?</button>
+            <button class="chip-btn chip-spatial" data-query="Can a 2-meter table fit?">📏 Can a 2-meter table fit?</button>
+          </div>
+
+          <div class="query-options" style="margin-top: 1rem;">
+            <label>
+              Top-K:
+              <input type="number" id="top-k-input" value="5" min="1" max="50" class="small-input">
+            </label>
+            <label>
+              Threshold:
+              <input type="number" id="threshold-input" value="0.22" min="0" max="1" step="0.05" class="small-input">
+            </label>
+          </div>
+        </div>
+
+        <!-- Spatial Reasoning Banner -->
+        <div class="spatial-card" id="spatial-card" style="display:none;">
+          <div class="spatial-header">
+            <span class="spatial-icon" id="spatial-icon">📐</span>
+            <h3 id="spatial-title">Spatial Reasoning Verdict</h3>
+          </div>
+          <p id="spatial-message" class="spatial-message"></p>
+          <div class="spatial-metrics" id="spatial-metrics"></div>
+        </div>
+
+        <!-- Results -->
+        <div class="results-section" id="results-section" style="display:none;">
+          <div class="results-header">
+            <h3 id="results-title">Results</h3>
+            <span class="results-meta" id="results-meta"></span>
+          </div>
+          <div class="results-list" id="results-list"></div>
+        </div>
+
+        <!-- No Match -->
+        <div class="no-match-section" id="no-match-section" style="display:none;">
+          <div class="no-match-icon">🔍</div>
+          <h3>No Confident Match Found</h3>
+          <p id="no-match-message"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VIEWER PANEL ============ -->
+    <section class="panel" id="panel-viewer">
+      <div class="viewer-container" id="viewer-container">
+        <canvas id="splat-canvas"></canvas>
+        <div id="viewer-labels-overlay" class="viewer-labels-overlay"></div>
+        
+        <div class="viewer-controls">
+          <button class="viewer-btn" id="btn-viewer-upload" title="Upload a new image or video">📤 Upload New</button>
+          <button class="viewer-btn" id="btn-reset-camera" title="Reset Camera to frame all 3D boxes">⟲ Reset Camera</button>
+          <button class="viewer-btn" id="btn-toggle-view" title="Toggle Top-Down / 3D Orbit">⬇️ Top-Down</button>
+          <button class="viewer-btn active-toggle" id="btn-toggle-boxes" title="Toggle 3D Bounding Boxes">📦 3D Boxes: ON</button>
+          <button class="viewer-btn" id="btn-toggle-points" title="Toggle Raw Point Cloud">☁️ Points: OFF</button>
+          <button class="viewer-btn" id="btn-screenshot" title="Screenshot">📸</button>
+        </div>
+        
+        <div class="viewer-info" id="viewer-info">
+          <span id="viewer-info-text">Scene Loaded • Metric Grid (0.5m)</span>
+        </div>
+        
+        <div class="viewer-legend">
+          <span>🖱️ Left Drag: Orbit</span>
+          <span>Right Drag: Pan</span>
+          <span>Scroll: Zoom</span>
+          <span>Click Box: Inspect</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HEATMAP PANEL ============ -->
+    <section class="panel" id="panel-heatmap">
+      <div class="panel-content" style="text-align: center;">
+        <h2>Room Coverage & 3D Object Density Map</h2>
+        <p style="color: var(--text-secondary); max-width: 700px; margin: 0 auto 1.5rem auto;">
+          Floorplan projection with smooth Gaussian coverage density, camera viewpoints, viewing direction cones, and 2D bounding box footprints.
+        </p>
+        <div id="heatmap-container" style="margin-top: 10px;">
+          <img id="heatmap-img" src="" alt="Coverage Heatmap" style="max-width: 100%; max-height: 72vh; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: none;">
+          <p id="heatmap-placeholder" style="color: var(--text-muted); padding: 3rem 0;">No heatmap available for the current scene. Upload an image or video to generate.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ REPROJECTION PANEL ============ -->
+    <section class="panel" id="panel-reprojection">
+      <div class="panel-content" style="text-align: center;">
+        <h2>3D Bounding Boxes Overlaid on Original Frames</h2>
+        <p style="color: var(--text-secondary); max-width: 700px; margin: 0 auto 1rem auto;">
+          Verify metric detection alignment: oriented 3D bounding boxes and real-world dimensions projected onto source frames.
+        </p>
+        
+        <div id="reprojection-controls" class="reproj-bar" style="display: none;">
+          <button class="reproj-btn" id="btn-prev-frame" title="Previous Frame">&larr; Prev</button>
+          <button class="reproj-btn" id="btn-play-frame" title="Auto-play sequence">▶ Play</button>
+          <span id="frame-counter" class="reproj-counter">Frame: 1 / 1</span>
+          <input type="range" id="reproj-frame-slider" class="reproj-slider" min="0" max="0" value="0" title="Scrub through video frames">
+          <button class="reproj-btn" id="btn-next-frame" title="Next Frame">Next &rarr;</button>
+
+          <span style="color: var(--border); margin: 0 4px;">|</span>
+
+          <label style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+            Boxes:
+            <select id="reproj-topk-select" class="reproj-select" title="Max boxes to display per frame">
+              <option value="5">Top 5</option>
+              <option value="8" selected>Top 8 (Clean)</option>
+              <option value="12">Top 12</option>
+              <option value="25">All</option>
+            </select>
+          </label>
+
+          <label style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+            Labels:
+            <select id="reproj-label-mode" class="reproj-select" title="Label appearance">
+              <option value="clean" selected>Full Metric</option>
+              <option value="compact">Compact</option>
+              <option value="none">Wireframes Only</option>
+            </select>
+          </label>
+        </div>
+        
+        <div id="reprojection-container" style="position: relative; display: inline-block;">
+          <img id="reprojection-img" src="" alt="Reprojected Frame" style="max-width: 100%; max-height: 68vh; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: none;">
+          <p id="reprojection-placeholder" style="color: var(--text-muted); padding: 3rem 0;">No frames available for the current scene.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="viewer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

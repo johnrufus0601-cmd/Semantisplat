@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data (large files — don't commit)
+data/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.ply
+*.pth
+*.pt
+*.ckpt
+*.npz
+
+# SAM checkpoints
+sam_vit_*.pth
+
+# COLMAP workspace and binaries
+colmap_workspace/
+colmap_bin/
+colmap_dir/
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Helper scripts
+push_to_github.ps1
+push_to_github.bat
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Coverage
+htmlcov/
+.coverage

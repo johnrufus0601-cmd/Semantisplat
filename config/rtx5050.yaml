@@ -1,0 +1,29 @@
+# ==============================================================================
+# SemantiSplat — RTX 5050 VRAM Optimized Configuration (8GB Limit)
+# ==============================================================================
+
+# --- Ingestion (FR-1) ---
+ingestion:
+  frame_extraction_fps: 8.0         # Slightly fewer frames for memory
+  downsample_resolution: 1024       # Downsample to max 1024px to save VRAM
+
+# --- Semantic Extraction (FR-2) ---
+semantic:
+  mixed_precision: "fp16"           # Use fp16 for SAM/CLIP
+  sam:
+    points_per_side: 16             # Lower grid density to use less VRAM
+    max_masks_per_frame: 60         # Cap masks to reduce CLIP memory
+  clip:
+    batch_size: 16                  # Reduce CLIP batch size
+
+# --- 3D Gaussian Reconstruction (FR-3) ---
+reconstruction:
+  mixed_precision: "fp16"           # Use mixed precision for rendering/backward
+  max_iterations: 15000             # Cap iterations to prevent slow memory leaks and speed up training
+
+  densification:
+    max_gaussians: 500000           # Hard cap on number of Gaussians to prevent OOM
+    grad_threshold: 0.0003          # Slightly higher threshold to spawn fewer Gaussians
+
+api:
+  port: 8000
