@@ -49,6 +49,7 @@ colmap_dir/
 # Helper scripts
 push_to_github.ps1
 push_to_github.bat
+run.bat
 
 # OS
 .DS_Store
